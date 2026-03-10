@@ -1,0 +1,128 @@
+# ============================================================
+# GMS 版本配置自动更新
+#
+# 触发方式:
+# 1. 每天 UTC 02:00 (北京时间 10:00) 自动执行
+# 2. 手动触发 (Actions 页面 → Run workflow)
+# 3. push 到 main 分支的 config/ 目录
+#
+# 流程:
+# 1. 安装 Playwright + 浏览器
+# 2. 运行爬虫脚本
+# 3. 校验生成的 variants.json
+# 4. 如果有变化，自动 commit + push
+# ============================================================
+
+name: Update GMS Variants
+
+on:
+  schedule:
+    # 每天北京时间 10:00 执行
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+    # 支持手动触发
+    inputs:
+      force_update:
+        description: '强制更新（即使版本未变）'
+        required: false
+        default: 'false'
+        type: boolean
+  push:
+    branches: [main]
+    paths:
+      - 'config/**'
+      - 'scripts/**'
+
+# 避免同时运行多个实例
+concurrency:
+  group: update-variants
+  cancel-in-progress: true
+
+jobs:
+  crawl-and-update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30   # 爬虫可能较慢，给足时间
+
+    steps:
+      - name: Checkout 仓库
+        uses: actions/checkout@v4
+
+      - name: 安装 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: 安装依赖
+        run: npm ci
+
+      - name: 安装 Playwright 浏览器
+        run: npx playwright install chromium --with-deps
+
+      - name: 运行爬虫
+        run: node scripts/crawl.js
+        env:
+          # 如果需要代理（可选）
+          # HTTP_PROXY: ${{ secrets.PROXY_URL }}
+          NODE_ENV: production
+
+      - name: 校验结果
+        run: node scripts/validate.js
+
+      - name: 检查是否有变化
+        id: check_changes
+        run: |
+          if git diff --quiet variants.json 2>/dev/null; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+            echo "📋 variants.json 无变化"
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+            echo "📋 variants.json 有更新"
+            echo ""
+            echo "变更摘要:"
+            git diff --stat variants.json 2>/dev/null || echo "(新文件)"
+          fi
+
+      - name: 提交并推送
+        if: steps.check_changes.outputs.changed == 'true' || github.event.inputs.force_update == 'true'
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+
+          # 获取更新摘要
+          DATE=$(date +%Y-%m-%d)
+
+          # 提取版本信息用于 commit message
+          GSF_VER=$(node -e "const d=require('./variants.json'); console.log(d.packages.gsf?.version || 'N/A')")
+          GPS_VER=$(node -e "const d=require('./variants.json'); console.log(d.packages.gps?.version || 'N/A')")
+          STORE_VER=$(node -e "const d=require('./variants.json'); console.log(d.packages.store?.version || 'N/A')")
+
+          git add variants.json
+          git commit -m "chore: update variants ${DATE}
+
+          GSF: ${GSF_VER}
+          GPlay Services: ${GPS_VER}
+          GPlay Store: ${STORE_VER}"
+
+          git push
+
+      - name: 输出统计
+        if: always()
+        run: |
+          if [ -f variants.json ]; then
+            echo "## 📊 爬取结果" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            node -e "
+              const d = require('./variants.json');
+              console.log('| 组件 | 版本 | 变体数 | 有直链 |');
+              console.log('|------|------|--------|--------|');
+              for (const [id, pkg] of Object.entries(d.packages)) {
+                const total = pkg.variants?.length || 0;
+                const direct = pkg.variants?.filter(v => v.direct_url).length || 0;
+                console.log('| ' + pkg.name + ' | ' + pkg.version + ' | ' + total + ' | ' + direct + ' |');
+              }
+              console.log('');
+              console.log('更新时间: ' + d.updated_at);
+            " >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ variants.json 未生成" >> $GITHUB_STEP_SUMMARY
+          fi

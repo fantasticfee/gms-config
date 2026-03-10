@@ -1,0 +1,17 @@
+{
+  "name": "gms-config",
+  "version": "1.0.0",
+  "private": true,
+  "description": "GMS 版本配置自动生成 - APKMirror 爬虫",
+  "scripts": {
+    "crawl": "node scripts/crawl.js",
+    "validate": "node scripts/validate.js",
+    "test": "node scripts/validate.js"
+  },
+  "dependencies": {
+    "playwright": "^1.49.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

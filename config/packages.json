@@ -1,0 +1,31 @@
+{
+  "packages": [
+    {
+      "id": "gsf",
+      "name": "Google Services Framework",
+      "package_name": "com.google.android.gsf",
+      "apkmirror_path": "google-inc/google-services-framework",
+      "install_order": 1,
+      "approx_size_mb": 3,
+      "notes": "通常只有一个 universal 包，无架构区分"
+    },
+    {
+      "id": "gps",
+      "name": "Google Play Services",
+      "package_name": "com.google.android.gms",
+      "apkmirror_path": "google-inc/google-play-services",
+      "install_order": 2,
+      "approx_size_mb": 60,
+      "notes": "变体最多，按架构+SDK+DPI组合，是匹配的核心"
+    },
+    {
+      "id": "store",
+      "name": "Google Play Store",
+      "package_name": "com.android.vending",
+      "apkmirror_path": "google-inc/google-play-store",
+      "install_order": 3,
+      "approx_size_mb": 35,
+      "notes": "变体较少，通常按架构+SDK区分"
+    }
+  ]
+}
