@@ -59,11 +59,32 @@ function logError(msg) {
 
 /**
  * 将 APKMirror 页面上的 Android 版本文本解析为数字
- * 例如 "Android 14.0+" → 14.0
+ * 例如 "Android 14.0+" → 14.0，"5.0+" → 5.0
+ * 注意：避免将应用版本号（如 26.10.32）误识别为 Android 版本
  */
 function parseAndroidVersion(text) {
-  const match = text.match(/(\d+\.\d+)/);
-  return match ? parseFloat(match[1]) : 0;
+  // 优先匹配 "Android X" 或 "Android X.Y" 格式（最可靠）
+  const androidMatch = text.match(/android\s+(\d+(?:\.\d+)?)/i);
+  if (androidMatch) return parseFloat(androidMatch[1]);
+
+  // 匹配 "X.Y+" 格式（如 "5.0+"，APKMirror 常用）
+  const plusMatch = text.match(/(\d+\.\d+)\+/);
+  if (plusMatch) return parseFloat(plusMatch[1]);
+
+  // 匹配 "minSdk X" 或 "API X" 格式
+  const apiMatch = text.match(/(?:minSdk|api)\s*(\d+)/i);
+  if (apiMatch) {
+    // API level 转 Android 版本（近似）
+    const api = parseInt(apiMatch[1]);
+    if (api >= 34) return 14.0;
+    if (api >= 33) return 13.0;
+    if (api >= 31) return 12.0;
+    if (api >= 30) return 11.0;
+    if (api >= 21) return 5.0;
+    return parseFloat((api / 10).toFixed(1));
+  }
+
+  return 0; // 未找到 → 不限制 Android 版本
 }
 
 /**
@@ -179,6 +200,16 @@ class ApkMirrorCrawler {
           );
         }
 
+        // 检查 404
+        const finalTitle = await this.page.title();
+        if (
+          finalTitle.toLowerCase().includes("page not found") ||
+          finalTitle.toLowerCase().includes("404")
+        ) {
+          logError(`  页面不存在 (404): ${url}`);
+          return false;
+        }
+
         return true;
       } catch (e) {
         logError(`  访问失败: ${e.message}`);
@@ -191,66 +222,61 @@ class ApkMirrorCrawler {
   }
 
   /**
-   * 步骤 1: 获取某个包的最新稳定版本 URL
+   * 步骤 1: 获取某个包的全部稳定版本列表
    *
    * @param {string} packagePath - APKMirror 上的包路径
-   *   例如: "google-inc/google-play-services"
-   * @returns {object|null} { version, versionUrl }
+   * @returns {Array} [{version, versionUrl}]
    */
-  async getLatestVersion(packagePath) {
+  async getVersionList(packagePath) {
     const url = `${BASE_URL}/apk/${packagePath}/`;
     const ok = await this.navigateWithRetry(url);
-    if (!ok) return null;
+    if (!ok) return [];
 
     try {
-      // APKMirror 版本列表页的结构:
-      // div.listWidget > div.appRow > 各版本条目
-      // 每个条目中 h5.appRowTitle > a 包含版本名和链接
+      // 只选取属于本包的版本条目：版本 URL 必须以 /apk/<packagePath>/ 开头
+      // 这样可以排除侧边栏"热门应用"等其他包的干扰
       const versions = await this.page.$$eval(
         ".listWidget .appRow",
-        (rows) => {
+        (rows, pkgPath) => {
           const results = [];
           for (const row of rows) {
             const link = row.querySelector("h5.appRowTitle a, .appRowTitle a");
             if (!link) continue;
 
-            const versionText = link.textContent.trim();
-            const href = link.getAttribute("href");
+            const href = link.getAttribute("href") || "";
+            if (!href.startsWith(`/apk/${pkgPath}/`)) continue;
 
-            // 跳过 beta/alpha 版本
+            const versionText = link.textContent.trim();
             const lower = versionText.toLowerCase();
             if (
               lower.includes("beta") ||
               lower.includes("alpha") ||
-              lower.includes("wear")
+              lower.includes("wear") ||
+              lower.includes("canary")
             ) {
               continue;
             }
 
-            results.push({
-              version: versionText,
-              url: href,
-            });
+            results.push({ version: versionText, url: href });
           }
           return results;
-        }
+        },
+        packagePath
       );
 
       if (versions.length === 0) {
         logError(`  未找到任何版本: ${packagePath}`);
-        return null;
+        return [];
       }
 
-      // 取第一个（最新的稳定版）
-      const latest = versions[0];
-      log(`  最新版本: ${latest.version}`);
-      return {
-        version: latest.version,
-        versionUrl: BASE_URL + latest.url,
-      };
+      log(`  找到 ${versions.length} 个版本，最新: ${versions[0].version}`);
+      return versions.map((v) => ({
+        version: v.version,
+        versionUrl: BASE_URL + v.url,
+      }));
     } catch (e) {
       logError(`  解析版本列表失败: ${e.message}`);
-      return null;
+      return [];
     }
   }
 
@@ -265,27 +291,24 @@ class ApkMirrorCrawler {
     if (!ok) return [];
 
     try {
-      // APKMirror 变体表格结构:
-      // table.variants-table 或 div.table-row
-      // 每行包含: 变体名 | 架构 | Android版本 | DPI | 下载链接
-
-      // 方法 1: 尝试解析变体表格
+      // 方法 1: 解析 variants-table
+      // 每行含: 变体名 | 架构 | Android 最低版本 | DPI
       let variants = await this.page.$$eval(
-        ".variants-table .table-row, .table-row.headerFont",
+        ".variants-table .table-row",
         (rows) => {
           const results = [];
           for (const row of rows) {
-            // 跳过表头
             if (row.classList.contains("headerFont")) continue;
 
             const cells = row.querySelectorAll(".table-cell");
-            if (cells.length < 4) continue;
-
-            const link = row.querySelector("a.accent_color");
+            // 查找指向 -download 页的链接（变体详情页链接）
+            const link =
+              row.querySelector('a[href*="-download"]') ||
+              row.querySelector("a.accent_color");
             if (!link) continue;
 
             results.push({
-              label: cells[0]?.textContent?.trim() || "",
+              label: cells[0]?.textContent?.trim() || link.textContent?.trim() || "",
               arch: cells[1]?.textContent?.trim() || "",
               android: cells[2]?.textContent?.trim() || "",
               dpi: cells[3]?.textContent?.trim() || "",
@@ -296,40 +319,72 @@ class ApkMirrorCrawler {
         }
       );
 
-      // 方法 2: 如果表格解析失败，尝试替代选择器
+      // 方法 2: 扫描当前发布页路径下的 *-download/ 子链接
+      // 用发布页 URL 作前缀过滤，避免侧边栏其他包的链接干扰
       if (variants.length === 0) {
-        log("  尝试替代解析方式...");
-        variants = await this.page.$$eval(
-          ".listWidget .appRow",
-          (rows) => {
-            const results = [];
-            for (const row of rows) {
-              const link = row.querySelector("a.accent_color");
-              if (!link) continue;
+        log("  尝试扫描 -download 链接...");
+        // 提取路径前缀，例如 /apk/google-inc/google-services-framework/google-services-framework-16-release/
+        let releasePath = "";
+        try {
+          releasePath = new URL(versionUrl).pathname;
+          if (!releasePath.endsWith("/")) releasePath += "/";
+        } catch {}
 
-              const text = row.textContent || "";
+        variants = await this.page.$$eval(
+          "a",
+          (links, basePath) => {
+            const seen = new Set();
+            const results = [];
+            for (const a of links) {
+              const href = a.getAttribute("href") || "";
+              // 必须是当前发布页的子路径（排除侧边栏其他包的链接）
+              if (basePath && !href.startsWith(basePath)) continue;
+              // 必须是下载页链接
+              if (
+                !href.includes("-download/") &&
+                !/-(?:android-apk|apks|apk)-download\/?$/.test(href)
+              ) continue;
+
+              const cleanHref = href.split("#")[0];
+              if (seen.has(cleanHref)) continue;
+              seen.add(cleanHref);
+
+              // 尝试从最近的表格行或 appRow 中提取 arch/android/dpi 信息
+              const row =
+                a.closest("tr, .table-row, .appRow") || a.parentElement;
+              const rowText = row ? row.textContent : "";
 
               results.push({
-                label: link.textContent?.trim() || "",
-                arch: text,
-                android: text,
-                dpi: text,
-                pageUrl: link.getAttribute("href"),
+                label: a.textContent?.trim() || cleanHref,
+                arch: rowText,
+                android: rowText,
+                dpi: rowText,
+                pageUrl: cleanHref,
               });
             }
             return results;
-          }
+          },
+          releasePath
         );
       }
 
-      log(`  找到 ${variants.length} 个变体`);
-      return variants.map((v) => ({
+      const parsed = variants.map((v) => ({
         label: v.label,
         arch: extractArch(v.arch),
         minAndroid: parseAndroidVersion(v.android),
         dpi: extractDpi(v.dpi),
-        pageUrl: v.pageUrl ? BASE_URL + v.pageUrl : null,
+        pageUrl: v.pageUrl
+          ? v.pageUrl.startsWith("http")
+            ? v.pageUrl
+            : BASE_URL + v.pageUrl
+          : null,
       }));
+
+      log(`  找到 ${parsed.length} 个变体`);
+      for (const v of parsed) {
+        log(`    • ${v.label} | arch=${v.arch} minAndroid=${v.minAndroid} dpi=${v.dpi}`);
+      }
+      return parsed;
     } catch (e) {
       logError(`  解析变体列表失败: ${e.message}`);
       return [];
@@ -355,7 +410,8 @@ class ApkMirrorCrawler {
       const downloadBtnSelectors = [
         'a.accent_bg.btn-flat.downloadButton',
         'a.downloadButton',
-        'a[href*="download"]',
+        'a[href*="-download/"]',        // 变体详情页链接（含路径分隔符，排除 Twitter 等）
+        'a[href*="download/?key="]',    // 下载确认页直接链接
         '.card-with-tabs a.accent_bg',
       ];
 
@@ -366,7 +422,9 @@ class ApkMirrorCrawler {
           const btn = await this.page.$(selector);
           if (btn) {
             const href = await btn.getAttribute("href");
-            if (href && href.includes("download")) {
+            // 跳过页面内锚点（如 #downloads、#file）
+            if (!href || href.startsWith("#")) continue;
+            if (href.includes("download")) {
               downloadPageUrl = href.startsWith("http")
                 ? href
                 : BASE_URL + href;
@@ -379,17 +437,17 @@ class ApkMirrorCrawler {
       }
 
       if (!downloadPageUrl) {
-        // 尝试直接在页面内容中查找下载链接
+        // 备选：扫描页面内所有链接，找 -download/ 或 download/?key= 格式
         downloadPageUrl = await this.page.$$eval("a", (links) => {
           for (const a of links) {
             const href = a.getAttribute("href") || "";
             const text = a.textContent || "";
-            if (
-              text.includes("Download APK") ||
-              (href.includes("-download") && href.includes("/apk/"))
-            ) {
-              return href;
-            }
+            // 下载确认页格式: /apk/.../download/?key=xxx
+            if (href.includes("/download/") && href.includes("?key=")) return href;
+            // 含"Download APK"文字的链接
+            if (text.includes("Download APK") && href.includes("/apk/")) return href;
+            // 变体下载页路径
+            if (href.includes("-download/") && href.includes("/apk/")) return href;
           }
           return null;
         });
@@ -477,10 +535,14 @@ class ApkMirrorCrawler {
    */
   filterBestVariant(variants, target) {
     return variants.filter((v) => {
-      // 架构匹配
-      if (v.arch !== target.arch && v.arch !== "universal") return false;
+      // 架构匹配：精确匹配、universal 或 unknown（单一 APK 包无架构标注）
+      const archOk =
+        v.arch === target.arch ||
+        v.arch === "universal" ||
+        v.arch === "unknown";
+      if (!archOk) return false;
 
-      // Android 版本匹配
+      // Android 版本匹配：变体的最低要求不能高于目标版本
       const targetVersion = parseFloat(target.minAndroid);
       if (v.minAndroid > targetVersion) return false;
 
@@ -522,123 +584,129 @@ async function main() {
       log(`处理包: ${pkg.name} (${pkg.package_name})`);
       log(`${"=".repeat(60)}`);
 
-      // 1. 获取最新版本
-      const latest = await crawler.getLatestVersion(pkg.apkmirror_path);
-      if (!latest) {
-        logError(`跳过 ${pkg.name}: 无法获取最新版本`);
+      // 1. 获取全部版本列表（由新到旧）
+      const versionList = await crawler.getVersionList(pkg.apkmirror_path);
+      if (versionList.length === 0) {
+        logError(`跳过 ${pkg.name}: 无法获取版本列表`);
         continue;
       }
 
       await sleep(DELAY_BETWEEN_PAGES);
 
-      // 2. 获取所有变体
-      const allVariants = await crawler.getVariants(latest.versionUrl);
-      if (allVariants.length === 0) {
-        logError(`跳过 ${pkg.name}: 无变体`);
+      // 变体缓存：同一个版本页只拉取一次
+      const variantsCache = new Map(); // versionUrl → variants[]
 
-        // 如果没有变体（GSF 通常只有一个 universal 包）
-        // 尝试直接从版本页获取下载链接
-        log(`  尝试作为单一 APK 处理...`);
-        const directUrl = await crawler.getDirectDownloadUrl(
-          latest.versionUrl
-        );
-
-        result.packages[pkg.id] = {
-          name: pkg.name,
-          package_name: pkg.package_name,
-          version: latest.version,
-          install_order: pkg.install_order,
-          variants: [
-            {
-              variant_label: `${latest.version} / universal`,
-              min_api: 21,
-              max_api: null,
-              abis: ["arm64-v8a", "armeabi-v7a", "x86_64", "x86"],
-              dpi: "nodpi",
-              file_size_mb: pkg.approx_size_mb || 3,
-              download_page_url: latest.versionUrl,
-              direct_url: directUrl,
-              sha256: null,
-            },
-          ],
-        };
-        continue;
-      }
-
-      // 3. 对每个目标组合，筛选并获取直链
+      // 2. 对每个目标组合，从最新版本开始逐一尝试
       const packageVariants = [];
-      const processedUrls = new Set();
+      const processedUrls = new Set(); // 已获取直链的变体页URL（避免重复请求）
 
       for (const target of TARGET_COMBINATIONS) {
         log(`\n  匹配目标: ${target.label}`);
-        const matched = crawler.filterBestVariant(allVariants, target);
 
-        if (matched.length === 0) {
-          log(`  ⚠️ 未找到匹配变体`);
-          continue;
-        }
+        let foundMatch = false;
 
-        // 取最佳匹配（第一个）
-        const best = matched[0];
-
-        // 避免重复处理同一个变体
-        if (processedUrls.has(best.pageUrl)) {
-          log(`  ↩️ 变体已处理过，跳过`);
-          // 找到之前的结果复用
-          const existing = packageVariants.find(
-            (v) => v.download_page_url === best.pageUrl
-          );
-          if (existing) {
-            // 更新 label 以反映更多适用场景
-            packageVariants.push({
-              ...existing,
-              variant_label: `${latest.version} / ${target.label}`,
-            });
+        for (const versionInfo of versionList) {
+          // 获取该版本的变体列表（优先用缓存）
+          let allVariants = variantsCache.get(versionInfo.versionUrl);
+          if (!allVariants) {
+            await sleep(DELAY_BETWEEN_PAGES);
+            allVariants = await crawler.getVariants(versionInfo.versionUrl);
+            variantsCache.set(versionInfo.versionUrl, allVariants);
           }
-          continue;
+
+          if (allVariants.length === 0) continue;
+
+          const matched = crawler.filterBestVariant(allVariants, target);
+          if (matched.length === 0) {
+            log(`    版本 ${versionInfo.version}: 无匹配变体，尝试更旧版本...`);
+            continue;
+          }
+
+          const best = matched[0];
+
+          // 同一变体已处理过：直接复用结果
+          if (processedUrls.has(best.pageUrl)) {
+            log(`  ↩️ 变体已处理过，复用结果`);
+            const existing = packageVariants.find(
+              (v) => v.download_page_url === best.pageUrl
+            );
+            if (existing) {
+              packageVariants.push({
+                ...existing,
+                variant_label: `${versionInfo.version} / ${target.label}`,
+              });
+            }
+            foundMatch = true;
+            break;
+          }
+
+          if (!best.pageUrl) {
+            log(`  ⚠️ 变体无页面链接`);
+            continue;
+          }
+
+          processedUrls.add(best.pageUrl);
+          log(`  最佳变体: ${best.label} (版本: ${versionInfo.version}, arch=${best.arch}, Android ${best.minAndroid}+, ${best.dpi})`);
+
+          await sleep(DELAY_BETWEEN_VARIANTS);
+
+          // 获取直链
+          const directUrl = await crawler.getDirectDownloadUrl(best.pageUrl);
+
+          const apiMap = { "14.0": 34, "13.0": 33, "12.0": 31, "11.0": 30 };
+          const minApi = apiMap[target.minAndroid] || 30;
+
+          packageVariants.push({
+            variant_label: `${versionInfo.version} / ${target.label}`,
+            version: versionInfo.version,
+            min_api: minApi,
+            max_api: null,
+            abis:
+              target.arch === "universal" || best.arch === "unknown"
+                ? ["arm64-v8a", "armeabi-v7a", "x86_64", "x86"]
+                : [target.arch],
+            dpi: best.dpi,
+            file_size_mb: pkg.approx_size_mb || 50,
+            download_page_url: best.pageUrl,
+            direct_url: directUrl,
+            sha256: null,
+          });
+
+          log(`  结果: ${directUrl ? "✅ 有直链" : "⚠️ 无直链（将回退到网页引导）"}`);
+          foundMatch = true;
+          break; // 找到匹配，不再尝试更旧版本
         }
 
-        if (!best.pageUrl) {
-          log(`  ⚠️ 变体无页面链接`);
-          continue;
+        if (!foundMatch) {
+          log(`  ⚠️ 未找到匹配变体（已遍历 ${versionList.length} 个版本）`);
         }
+      }
 
-        processedUrls.add(best.pageUrl);
-
-        log(`  最佳变体: ${best.label} (${best.arch}, Android ${best.minAndroid}+, ${best.dpi})`);
-
-        await sleep(DELAY_BETWEEN_VARIANTS);
-
-        // 获取直链
-        const directUrl = await crawler.getDirectDownloadUrl(best.pageUrl);
-
-        // 根据目标组合推算 API level
-        const apiMap = { "14.0": 34, "13.0": 33, "12.0": 31, "11.0": 30 };
-        const minApi = apiMap[target.minAndroid] || 30;
-
+      // 如果所有目标都没匹配到变体，尝试用最新版本直接获取
+      if (packageVariants.length === 0 && versionList.length > 0) {
+        log(`  尝试作为单一 APK 处理（最新版本）...`);
+        const latestInfo = versionList[0];
+        const directUrl = await crawler.getDirectDownloadUrl(
+          latestInfo.versionUrl
+        );
         packageVariants.push({
-          variant_label: `${latest.version} / ${target.label}`,
-          min_api: minApi,
+          variant_label: `${latestInfo.version} / universal`,
+          version: latestInfo.version,
+          min_api: 21,
           max_api: null,
-          abis: target.arch === "universal"
-            ? ["arm64-v8a", "armeabi-v7a"]
-            : [target.arch],
-          dpi: best.dpi,
-          file_size_mb: pkg.approx_size_mb || 50,
-          download_page_url: best.pageUrl,
+          abis: ["arm64-v8a", "armeabi-v7a", "x86_64", "x86"],
+          dpi: "nodpi",
+          file_size_mb: pkg.approx_size_mb || 3,
+          download_page_url: latestInfo.versionUrl,
           direct_url: directUrl,
           sha256: null,
         });
-
-        log(
-          `  结果: ${directUrl ? "✅ 有直链" : "⚠️ 无直链（将回退到网页引导）"}`
-        );
       }
 
       result.packages[pkg.id] = {
         name: pkg.name,
         package_name: pkg.package_name,
-        version: latest.version,
+        version: versionList[0].version,
         install_order: pkg.install_order,
         variants: packageVariants,
       };
