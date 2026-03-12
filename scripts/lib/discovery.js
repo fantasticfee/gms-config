@@ -1,17 +1,25 @@
 /**
- * Discovery layer — uses APKMirror RSS feeds (plain HTTPS, no browser).
+ * Discovery layer — three strategies, tried in order (all plain HTTPS, no browser).
  *
- * Each package exposes a public feed at:
+ * Strategy 1 — RSS feed  (preferred)
  *   https://www.apkmirror.com/apk/{apkmirror_path}/feed/
+ *   Rich version titles, fast.  Returns HTTP 403 for some packages.
  *
- * Comparing the latest RSS entry against the saved state lets us decide
- * whether to start the browser at all.  Typical steady-state: 0 new
- * versions → browser never launched → 0 Cloudflare challenges.
+ * Strategy 2 — Sitemap  (robots.txt canonical entry point)
+ *   APKMirror's robots.txt explicitly lists:
+ *     Sitemap: https://www.apkmirror.com/sitemap_index.xml
+ *   We fetch the index, locate the sub-sitemap that contains the package
+ *   path, then extract release URLs.  More authorised than scraping the
+ *   listing page but requires two HTTP round-trips.
  *
- * Fallback: if the RSS feed returns 403 / is unavailable, we try to
- * scrape the package listing page directly (plain HTTPS, no browser).
- * The listing page may also be blocked but is worth one attempt before
- * giving up and retaining the existing data.
+ * Strategy 3 — Package listing page  (last resort)
+ *   https://www.apkmirror.com/apk/{apkmirror_path}/
+ *   Regex-extracts -release/ hrefs directly from the HTML.
+ *
+ * robots.txt compliance (https://www.apkmirror.com/robots.txt):
+ *   Crawl-delay: 3  (respected in crawl.js via DELAY_BETWEEN_PAGES = 3000 ms)
+ *   Disallow: *\/comment-page-1*  (filtered in crawl.js navigateWithRetry)
+ *   Disallow: /wp-content/themes/APKMirror/download.php  (filtered in crawl.js)
  */
 
 "use strict";
@@ -22,6 +30,9 @@ const http = require("http");
 const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
   "(KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36";
+
+// Canonical sitemap entry from APKMirror's robots.txt
+const SITEMAP_INDEX_URL = "https://www.apkmirror.com/sitemap_index.xml";
 
 // ---------------------------------------------------------------
 // Internal: plain HTTPS GET with redirect following
@@ -116,6 +127,93 @@ function parseRss(xml, packagePath) {
   }
 
   return versions;
+}
+
+// ---------------------------------------------------------------
+// Internal: sitemap-based discovery (robots.txt canonical source)
+// ---------------------------------------------------------------
+
+/**
+ * Parse <loc> elements from an XML sitemap or sitemap index.
+ * Returns an array of URL strings.
+ */
+function parseSitemapLocs(xml) {
+  const locs = [];
+  const re = /<loc>\s*(https?:\/\/[^<\s]+)\s*<\/loc>/g;
+  let m;
+  while ((m = re.exec(xml)) !== null) locs.push(m[1]);
+  return locs;
+}
+
+/**
+ * Strategy 2: discover releases via sitemap_index.xml (no browser).
+ *
+ * Workflow:
+ *   1. Fetch sitemap_index.xml → list of sub-sitemap URLs.
+ *   2. For each sub-sitemap whose URL mentions the package path (fast
+ *      pre-filter), fetch and scan for -release/ entries.
+ *   3. Stop after the first sub-sitemap that yields results (most packages
+ *      live in a single sub-sitemap).
+ *
+ * Returns [{version, url}] newest-first, or null on failure.
+ */
+async function discoverViaSitemap(pkg) {
+  try {
+    const indexXml = await get(SITEMAP_INDEX_URL);
+    const subSitemaps = parseSitemapLocs(indexXml);
+    if (subSitemaps.length === 0) return null;
+
+    // The package's slug (last component of apkmirror_path) is usually present
+    // in the sub-sitemap URL or at minimum in its content.
+    const pkgSlug = pkg.apkmirror_path.split("/").pop();
+    const pkgPath = pkg.apkmirror_path;
+
+    for (const sitemapUrl of subSitemaps) {
+      // Quick pre-filter: skip sitemaps whose URL clearly can't contain this pkg
+      // (e.g. sitemaps named after unrelated categories/letters).
+      // We can't reliably pre-filter by URL alone, so we just try each one but
+      // abort early once we find a match to avoid excessive requests.
+      let sitemapXml;
+      try {
+        sitemapXml = await get(sitemapUrl);
+      } catch {
+        continue;
+      }
+
+      // Skip sub-sitemaps that don't mention this package at all
+      if (!sitemapXml.includes(pkgSlug) && !sitemapXml.includes(pkgPath)) {
+        continue;
+      }
+
+      const versions = [];
+      const seen = new Set();
+
+      for (const url of parseSitemapLocs(sitemapXml)) {
+        if (!url.includes(pkgPath) || !url.includes("-release/")) continue;
+        const lower = url.toLowerCase();
+        if (
+          lower.includes("beta") ||
+          lower.includes("alpha") ||
+          lower.includes("canary") ||
+          lower.includes("preview")
+        ) continue;
+        if (seen.has(url)) continue;
+        seen.add(url);
+
+        const slugMatch = url.match(/\/([^/]+)-release\/?$/);
+        if (!slugMatch) continue;
+        const digits = slugMatch[1].match(/(\d[\d.-]*)$/);
+        const version = digits ? digits[1].replace(/-/g, ".") : slugMatch[1];
+        versions.push({ version, url });
+      }
+
+      if (versions.length > 0) return versions;
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 // ---------------------------------------------------------------
@@ -219,14 +317,25 @@ async function discoverNewVersions(pkg, lastVersion) {
     rssError = e.message;
   }
 
-  // ── Strategy 2: package listing page (RSS unavailable) ────────
+  // ── Strategy 2: sitemap (robots.txt canonical source) ────────
   if (!all) {
     console.log(
-      `  ⚠️  RSS unavailable (${rssError}) — trying package listing page…`
+      `  ⚠️  RSS unavailable (${rssError}) — trying sitemap_index.xml…`
     );
-    const fallback = await discoverViaPackagePage(pkg);
-    if (fallback) {
-      all = fallback;
+    const fromSitemap = await discoverViaSitemap(pkg);
+    if (fromSitemap) {
+      all = fromSitemap;
+      discoverySource = "sitemap";
+      console.log(`  ↩️  Sitemap yielded ${all.length} release(s).`);
+    }
+  }
+
+  // ── Strategy 3: package listing page (last resort) ────────────
+  if (!all) {
+    console.log("  ⚠️  Sitemap yielded nothing — trying package listing page…");
+    const fromListing = await discoverViaPackagePage(pkg);
+    if (fromListing) {
+      all = fromListing;
       discoverySource = "listing";
       console.log(`  ↩️  Package listing page yielded ${all.length} release(s).`);
     }

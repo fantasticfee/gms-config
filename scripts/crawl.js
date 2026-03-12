@@ -38,8 +38,21 @@ const USER_AGENT =
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
   "(KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36";
 
-const DELAY_BETWEEN_PAGES = 3000;     // ms — respects Crawl-delay: 3
+// robots.txt (https://www.apkmirror.com/robots.txt):
+//   User-agent: *  Crawl-delay: 3
+//   Disallow: */comment-page-1*
+//   Disallow: /wp-content/themes/APKMirror/download.php
+//   Allow: /
+//   Sitemap: https://www.apkmirror.com/sitemap_index.xml
+const DELAY_BETWEEN_PAGES = 3000;     // ms — satisfies Crawl-delay: 3
 const DELAY_BETWEEN_VARIANTS = 5000;  // ms — extra pause before download-link fetch
+
+// URL patterns explicitly disallowed by APKMirror's robots.txt.
+// navigateWithRetry checks these before opening any page.
+const ROBOTS_DISALLOW = [
+  /\/comment-page-\d+/,                          // */comment-page-1* (and any number)
+  /\/wp-content\/themes\/APKMirror\/download\.php/, // /wp-content/themes/APKMirror/download.php
+];
 
 // deviceApi: the API level of the target device — used for "minSdk ≤ deviceApi" matching.
 // minApi / maxApi: the values written into variants.json for the installer to filter.
@@ -236,6 +249,16 @@ class ApkMirrorCrawler {
    *   Cloudflare cases are appended to this.reviewQueue.
    */
   async navigateWithRetry(url, maxRetries = 3) {
+    // Respect robots.txt Disallow rules before touching the network
+    let urlPath;
+    try { urlPath = new URL(url).pathname; } catch { urlPath = url; }
+    for (const pattern of ROBOTS_DISALLOW) {
+      if (pattern.test(urlPath)) {
+        logError(`  Skipping disallowed URL (robots.txt): ${url}`);
+        return false;
+      }
+    }
+
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         log(`  → ${url}  (attempt ${attempt}/${maxRetries})`);
@@ -534,12 +557,19 @@ class ApkMirrorCrawler {
       const directUrl = await this.page.$$eval("a", (links) => {
         for (const a of links) {
           const href = a.getAttribute("href") || "";
+          // download.php?id= links are the standard APKMirror direct-download URL
           if (href.includes("download.php?id=")) return href;
         }
         for (const a of links) {
           const rel = a.getAttribute("rel") || "";
           const href = a.getAttribute("href") || "";
-          if (rel.includes("nofollow") && href.includes("/wp-content/")) return href;
+          // Only match actual uploaded APK files under /wp-content/uploads/
+          // Explicitly exclude /wp-content/themes/APKMirror/download.php
+          // (disallowed by robots.txt)
+          if (
+            rel.includes("nofollow") &&
+            href.includes("/wp-content/uploads/")
+          ) return href;
         }
         return null;
       });
