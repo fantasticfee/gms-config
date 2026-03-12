@@ -110,6 +110,13 @@ function validate() {
       console.warn(`   ⚠️ 该包所有变体均无直链`);
       warnings++;
     }
+
+    // Android 11 coverage: at least one variant must have min_api ≤ 30
+    const hasAndroid11 = pkg.variants.some((v) => (v.min_api ?? 0) <= 30);
+    if (!hasAndroid11) {
+      console.warn(`   ⚠️ 无 Android 11 (API 30) 兼容变体`);
+      warnings++;
+    }
   }
 
   // 汇总

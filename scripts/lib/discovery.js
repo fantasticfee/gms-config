@@ -348,7 +348,10 @@ async function discoverNewVersions(pkg, lastVersion) {
   const latestVersion = all[0].version;
 
   if (!lastVersion) {
-    return { newVersions: [all[0]], latestVersion, discoverySource };
+    // Bootstrap mode: return up to 8 recent versions so Phase 2 can fall back
+    // to older releases when the latest version no longer supports API 30
+    // (e.g. new GPS/GSF builds that only target Android 14+).
+    return { newVersions: all.slice(0, 8), latestVersion, discoverySource };
   }
 
   if (latestVersion === lastVersion) {

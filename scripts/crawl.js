@@ -713,26 +713,35 @@ async function main() {
       const packageVariants = [];
       const processedUrls = new Set(); // avoid re-fetching the same APK download page
 
-      // ── Phase 2a: fetch each release URL ONCE, cache variants in memory ──
-      //   Never re-open the same page per-target — that triggers challenge loops.
-      log("\n  Pre-fetching variant tables (one fetch per release URL)...");
-      const versionVariantMap = new Map();
-      for (const versionInfo of disc.newVersions) {
-        if (versionVariantMap.has(versionInfo.url)) continue;
-        await sleep(DELAY_BETWEEN_PAGES);
-        const variants = await crawler.getVariants(versionInfo.url);
-        versionVariantMap.set(versionInfo.url, variants);
-        log(
-          `  📦 ${versionInfo.version}: ${variants.length} variant(s) cached.`
-        );
-      }
+      // ── Phase 2: lazy version fetching + target matching ─────────────────
+      //
+      // Version pages are fetched ON DEMAND as each target is processed,
+      // not pre-fetched all at once.  This means:
+      //   • If the latest version covers all targets, older versions are never
+      //     loaded — zero extra Cloudflare exposure.
+      //   • If a target (e.g. "arm64-v8a / Android 11") has no compatible APK
+      //     in the latest release, the next-oldest version is fetched and tried,
+      //     continuing until a match is found or all discovered versions are
+      //     exhausted.
+      //   • The in-memory versionVariantMap acts as a per-run cache so the
+      //     same version page is never opened twice.
+      const versionVariantMap = new Map(); // url → parsed variants[]
 
-      // ── Phase 2b: match targets locally — no additional browser fetches ──
       for (const target of TARGET_COMBINATIONS) {
         log(`\n  Target: ${target.label}`);
         let foundMatch = false;
 
         for (const versionInfo of disc.newVersions) {
+          // Lazily fetch this version's variant table (once per URL)
+          if (!versionVariantMap.has(versionInfo.url)) {
+            await sleep(DELAY_BETWEEN_PAGES);
+            const variants = await crawler.getVariants(versionInfo.url);
+            versionVariantMap.set(versionInfo.url, variants);
+            log(
+              `  📦 ${versionInfo.version}: ${variants.length} variant(s) fetched.`
+            );
+          }
+
           const allVariants = versionVariantMap.get(versionInfo.url) || [];
 
           if (allVariants.length === 0) {
