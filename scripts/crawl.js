@@ -31,12 +31,18 @@ const DELAY_BETWEEN_PAGES = 3000;
 const DELAY_BETWEEN_VARIANTS = 5000;
 
 // 需要爬取的架构和 Android 版本组合
+// minApi/maxApi 是直接写入 variants.json 的 API Level 范围：
+//   Android 14+  → minApi:34, maxApi:null  (覆盖所有 ≥ API 34 的设备)
+//   Android 13   → minApi:33, maxApi:33
+//   Android 12   → minApi:31, maxApi:32   (含 12L)
+//   Android 11   → minApi:30, maxApi:30
+//   armv7/11+    → minApi:30, maxApi:null  (armv7 设备跨版本通用)
 const TARGET_COMBINATIONS = [
-  { arch: "arm64-v8a", minAndroid: "14.0", label: "arm64-v8a / Android 14+" },
-  { arch: "arm64-v8a", minAndroid: "13.0", label: "arm64-v8a / Android 13" },
-  { arch: "arm64-v8a", minAndroid: "12.0", label: "arm64-v8a / Android 12" },
-  { arch: "arm64-v8a", minAndroid: "11.0", label: "arm64-v8a / Android 11" },
-  { arch: "armeabi-v7a", minAndroid: "11.0", label: "armv7 / Android 11+" },
+  { arch: "arm64-v8a",  minAndroid: "14.0", minApi: 34, maxApi: null, label: "arm64-v8a / Android 14+" },
+  { arch: "arm64-v8a",  minAndroid: "13.0", minApi: 33, maxApi: 33,   label: "arm64-v8a / Android 13" },
+  { arch: "arm64-v8a",  minAndroid: "12.0", minApi: 31, maxApi: 32,   label: "arm64-v8a / Android 12" },
+  { arch: "arm64-v8a",  minAndroid: "11.0", minApi: 30, maxApi: 30,   label: "arm64-v8a / Android 11" },
+  { arch: "armeabi-v7a", minAndroid: "11.0", minApi: 30, maxApi: null, label: "armv7 / Android 11+" },
 ];
 
 // ============================================================
@@ -137,6 +143,8 @@ class ApkMirrorCrawler {
         "--disable-setuid-sandbox",
         "--disable-dev-shm-usage",
         "--disable-blink-features=AutomationControlled",
+        // 关闭 site-isolation 可减少部分指纹泄露
+        "--disable-features=IsolateOrigins,site-per-process",
       ],
     });
 
@@ -144,19 +152,50 @@ class ApkMirrorCrawler {
       userAgent: USER_AGENT,
       viewport: { width: 1920, height: 1080 },
       locale: "en-US",
-      // 模拟真实浏览器特征
       extraHTTPHeaders: {
         "Accept-Language": "en-US,en;q=0.9",
         Accept:
           "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+        // 补充现代浏览器必带的 Client Hints 请求头
+        "sec-ch-ua":
+          '"Chromium";v="125", "Google Chrome";v="125", "Not-A.Brand";v="99"',
+        "sec-ch-ua-mobile": "?0",
+        "sec-ch-ua-platform": '"Windows"',
+        "Upgrade-Insecure-Requests": "1",
       },
     });
 
     this.page = await this.context.newPage();
 
-    // 移除 webdriver 标记，降低被检测风险
+    // 全面伪装浏览器指纹，降低被 Cloudflare 检测的概率
     await this.page.addInitScript(() => {
-      Object.defineProperty(navigator, "webdriver", { get: () => false });
+      // webdriver: 真实浏览器中该属性为 undefined，而非 false
+      Object.defineProperty(navigator, "webdriver", { get: () => undefined });
+
+      // 伪造 Chrome 对象（headless 缺少此对象，是主要检测点之一）
+      window.chrome = { runtime: {} };
+
+      // 伪造 plugins（headless 下为空数组，真实浏览器有默认插件）
+      Object.defineProperty(navigator, "plugins", {
+        get: () => [1, 2, 3, 4, 5],
+      });
+
+      // 伪造语言列表
+      Object.defineProperty(navigator, "languages", {
+        get: () => ["en-US", "en"],
+      });
+
+      // 修复 Notification 权限查询（headless 下行为与真实浏览器不同）
+      const _origQuery =
+        window.navigator.permissions?.query?.bind(
+          window.navigator.permissions
+        );
+      if (_origQuery) {
+        window.navigator.permissions.query = (params) =>
+          params.name === "notifications"
+            ? Promise.resolve({ state: Notification.permission })
+            : _origQuery(params);
+      }
     });
 
     log("浏览器已启动");
@@ -188,16 +227,24 @@ class ApkMirrorCrawler {
           title.includes("Just a moment") ||
           title.includes("Attention Required")
         ) {
-          log("  ⚠️ Cloudflare challenge，等待 10 秒...");
-          await sleep(10000);
+          // 等待更长时间让 challenge 有机会自动完成
+          log("  ⚠️ Cloudflare challenge，等待 30 秒...");
+          await sleep(30000);
 
-          // 等待 challenge 完成
-          await this.page.waitForFunction(
-            () =>
-              !document.title.includes("Just a moment") &&
-              !document.title.includes("Attention Required"),
-            { timeout: 30000 }
-          );
+          // 检查 challenge 是否已解除；超时不抛错，仅记录后继续
+          try {
+            await this.page.waitForFunction(
+              () =>
+                !document.title.includes("Just a moment") &&
+                !document.title.includes("Attention Required"),
+              { timeout: 15000 }
+            );
+            log("  ✅ Cloudflare challenge 已通过");
+          } catch {
+            const curTitle = await this.page.title().catch(() => "unknown");
+            log(`  ⚠️ Challenge 可能未完全解除 (title="${curTitle}")，继续尝试...`);
+            // 不抛出，让后续检查决定是否重试
+          }
         }
 
         // 检查 404
@@ -624,7 +671,8 @@ async function main() {
 
           const best = matched[0];
 
-          // 同一变体已处理过：直接复用结果
+          // 同一变体已处理过：复用直链，但必须用当前 target 自己的 API 范围
+          // （不同 target 可能指向同一 APK URL，如 GSF 单包，但 min/max_api 各不相同）
           if (processedUrls.has(best.pageUrl)) {
             log(`  ↩️ 变体已处理过，复用结果`);
             const existing = packageVariants.find(
@@ -634,6 +682,8 @@ async function main() {
               packageVariants.push({
                 ...existing,
                 variant_label: `${versionInfo.version} / ${target.label}`,
+                min_api: target.minApi,
+                max_api: target.maxApi,
               });
             }
             foundMatch = true;
@@ -653,14 +703,11 @@ async function main() {
           // 获取直链
           const directUrl = await crawler.getDirectDownloadUrl(best.pageUrl);
 
-          const apiMap = { "14.0": 34, "13.0": 33, "12.0": 31, "11.0": 30 };
-          const minApi = apiMap[target.minAndroid] || 30;
-
           packageVariants.push({
             variant_label: `${versionInfo.version} / ${target.label}`,
             version: versionInfo.version,
-            min_api: minApi,
-            max_api: null,
+            min_api: target.minApi,
+            max_api: target.maxApi,
             abis:
               target.arch === "universal" || best.arch === "unknown"
                 ? ["arm64-v8a", "armeabi-v7a", "x86_64", "x86"]
