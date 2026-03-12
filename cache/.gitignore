@@ -1,0 +1,3 @@
+# Cached parsed variant results — not committed.
+# Delete *.json here to force a fresh parse without re-hitting the live site.
+*.json
