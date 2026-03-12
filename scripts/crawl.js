@@ -698,6 +698,23 @@ async function main() {
         continue;
       }
 
+      // ── Merge pinned_versions ─────────────────────────────────
+      // Versions listed in packages.json as pinned_versions are always
+      // appended to the crawl queue AFTER the newly discovered versions.
+      // This ensures that manually curated APKs (e.g. the last build
+      // supporting an older Android API level) are processed alongside
+      // any new release — so their direct_url is refreshed whenever the
+      // crawler runs for this package.
+      if (pkg.pinned_versions && pkg.pinned_versions.length > 0) {
+        const discoveredUrls = new Set(disc.newVersions.map((v) => v.url));
+        for (const pv of pkg.pinned_versions) {
+          if (!discoveredUrls.has(pv.url)) {
+            disc.newVersions.push({ version: pv.version, url: pv.url });
+            log(`  📌 Pinned: ${pv.version}  (${pv.reason || "manual"})`);
+          }
+        }
+      }
+
       log(
         `  🆕 ${disc.newVersions.length} new version(s): ` +
           disc.newVersions.map((v) => v.version).join(", ") +

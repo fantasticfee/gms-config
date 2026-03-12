@@ -7,7 +7,14 @@
       "apkmirror_path": "google-inc/google-services-framework",
       "install_order": 1,
       "approx_size_mb": 3,
-      "notes": "通常只有一个 universal 包，无架构区分"
+      "notes": "通常只有一个 universal 包，无架构区分",
+      "pinned_versions": [
+        {
+          "version": "Google Services Framework 11-6684105",
+          "url": "https://www.apkmirror.com/apk/google-inc/google-services-framework/google-services-framework-11-6684105-release/",
+          "reason": "Android 11 (API 30) 最广泛使用版本，社区验证稳定，下载量 25 万+"
+        }
+      ]
     },
     {
       "id": "gps",
