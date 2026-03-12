@@ -1,100 +1,101 @@
-# GMS Config - APKMirror 爬虫服务
+# GMS Config - APKMirror Crawler Service
 
-自动从 APKMirror 获取 Google 三件套的最新版本和直接下载链接，生成 `variants.json` 供 GMS 安装助手 App 使用。
+Automatically fetches the latest versions and direct download links for the Google “GMS trio” from APKMirror, and generates `variants.json` for the GMS installer assistant app.
 
-## 工作原理
+## How it works
 
 ```
 ┌─────────────────────────────────────────────────┐
-│            GitHub Actions (每天定时)              │
+│          GitHub Actions (scheduled daily)        │
 │                                                   │
-│  1. 启动 Playwright 浏览器                        │
-│  2. 访问 APKMirror，获取三件套最新版本             │
-│  3. 遍历每个版本的所有变体                         │
-│  4. 模拟点击，获取直接下载链接                     │
-│  5. 生成 variants.json                            │
-│  6. 自动 commit & push                            │
+│  1. Launch Playwright browser                     │
+│  2. Visit APKMirror and get the latest versions   │
+│     of the GMS trio                               │
+│  3. Iterate all variants for each version         │
+│  4. Simulate clicks to extract direct URLs        │
+│  5. Generate variants.json                        │
+│  6. Auto commit & push                            │
 └──────────────────────┬──────────────────────────┘
                        ↓
 ┌─────────────────────────────────────────────────┐
-│    variants.json (托管在 GitHub)                  │
+│        variants.json (hosted on GitHub)           │
 │                                                   │
-│    GMS App 启动时拉取此文件                        │
-│    → 获取适配当前设备的 APK 直链                   │
-│    → 用户点击即下载，无需手动找版本                │
+│    The GMS app fetches this file on startup       │
+│    → Get APK direct links that match the device   │
+│    → One-tap download, no manual version hunting  │
 └─────────────────────────────────────────────────┘
 ```
 
-## 快速开始
+## Quick start
 
-### 1. 本地运行（首次测试）
+### 1. Run locally (first-time testing)
 
 ```bash
-# 克隆仓库
+# Clone the repo
 git clone https://github.com/YOUR_USERNAME/gms-config.git
 cd gms-config
 
-# 安装依赖
+# Install dependencies
 npm install
 
-# 安装 Playwright 浏览器（约 200MB）
+# Install Playwright browsers (~200MB)
 npx playwright install chromium --with-deps
 
-# 先用单个 URL 测试爬虫是否正常工作
+# Test the crawler with a single URL first
 node scripts/test-single.js "https://www.apkmirror.com/apk/google-inc/google-services-framework/google-services-framework-14-8692178-release/"
 
-# 如果测试通过，运行完整爬虫
+# If it passes, run the full crawler
 npm run crawl
 
-# 校验生成的结果
+# Validate the generated output
 npm run validate
 ```
 
-### 2. 部署到 GitHub Actions（自动化）
+### 2. Deploy to GitHub Actions (automation)
 
 ```bash
-# 推送到 GitHub
+# Push to GitHub
 git add .
 git commit -m "init: crawler service"
 git push origin main
 
-# 去 GitHub 仓库 → Settings → Actions → General
-# 确保 "Allow GitHub Actions to create and approve pull requests" 已开启
-# 确保 Workflow permissions 设为 "Read and write permissions"
+# Go to GitHub repo → Settings → Actions → General
+# Make sure "Allow GitHub Actions to create and approve pull requests" is enabled
+# Make sure Workflow permissions is set to "Read and write permissions"
 
-# 手动触发第一次执行:
-# GitHub 仓库 → Actions → Update GMS Variants → Run workflow
+# Manually trigger the first run:
+# GitHub repo → Actions → Update GMS Variants → Run workflow
 ```
 
-之后爬虫会每天北京时间 10:00 自动运行。
+After that, the crawler will run every day at 10:00 (China Standard Time).
 
-### 3. 对接 Flutter App
+### 3. Integrate with the Flutter app
 
-修改 App 中 `version_matcher.dart` 的 `_configUrl`：
+Update `_configUrl` in the app’s `version_matcher.dart`:
 
 ```dart
 static const _configUrl =
     'https://raw.githubusercontent.com/YOUR_USERNAME/gms-config/main/variants.json';
 ```
 
-## 项目结构
+## Project structure
 
 ```
 gms-config/
 ├── .github/workflows/
-│   └── update-variants.yml    # GitHub Actions 自动化配置
+│   └── update-variants.yml    # GitHub Actions automation config
 ├── config/
-│   └── packages.json          # 目标包定义（改这个来增减爬取目标）
+│   └── packages.json          # Target packages (edit to add/remove)
 ├── scripts/
-│   ├── crawl.js               # 核心爬虫脚本
-│   ├── validate.js            # 结果校验脚本
-│   └── test-single.js         # 单 URL 测试工具
-├── variants.json              # 【自动生成】App 读取的配置文件
+│   ├── crawl.js               # Core crawler script
+│   ├── validate.js            # Output validation script
+│   └── test-single.js         # Single-URL test tool
+├── variants.json              # [AUTO-GENERATED] config consumed by the app
 ├── package.json
 └── README.md
 ```
 
-## variants.json 格式说明
+## `variants.json` format
 
 ```jsonc
 {
@@ -109,13 +110,13 @@ gms-config/
       "variants": [
         {
           "variant_label": "14-8692178 / universal",
-          "min_api": 21,           // 最低支持的 API level
-          "max_api": null,         // null 表示无上限
+          "min_api": 21,           // minimum supported API level
+          "max_api": null,         // null means no upper bound
           "abis": ["arm64-v8a", "armeabi-v7a"],
           "dpi": "nodpi",
           "file_size_mb": 3,
-          "download_page_url": "https://www.apkmirror.com/apk/...",   // 网页备用
-          "direct_url": "https://www.apkmirror.com/wp-content/themes/APKMirror/download.php?id=xxx&key=xxx",  // 直链
+          "download_page_url": "https://www.apkmirror.com/apk/...",   // fallback web page
+          "direct_url": "https://www.apkmirror.com/wp-content/themes/APKMirror/download.php?id=xxx&key=xxx",  // direct link
           "sha256": null
         }
       ]
@@ -126,57 +127,57 @@ gms-config/
 }
 ```
 
-App 侧的匹配逻辑：
-1. 读取设备的 `apiLevel` 和 `cpuArch`
-2. 对每个包，筛选 `min_api <= 设备API <= max_api` 且 `abis` 包含设备架构的变体
-3. 优先使用 `direct_url` 直接下载
-4. 如果 `direct_url` 为 null 或失效，回退到打开 `download_page_url` 网页
+Matching logic on the app side:
+1. Read the device `apiLevel` and `cpuArch`
+2. For each package, filter variants where `min_api <= device API <= max_api` and `abis` contains the device architecture
+3. Prefer `direct_url` for direct download
+4. If `direct_url` is null or expired, fall back to opening `download_page_url`
 
-## 常见问题
+## FAQ
 
-### 爬虫被 Cloudflare 拦截怎么办？
+### What if Cloudflare blocks the crawler?
 
-爬虫已内置多层应对：
-- 使用真实浏览器（Playwright Chromium），不是简单的 HTTP 请求
-- 伪装了 User-Agent 和浏览器指纹
-- 移除了 webdriver 标记
-- 请求之间有 3-5 秒间隔
+The crawler includes multiple mitigations out of the box:
+- Uses a real browser (Playwright Chromium), not plain HTTP requests
+- Spoofs User-Agent and browser fingerprints
+- Removes webdriver indicators
+- Adds a 3–5 second delay between requests
 
-如果仍然被拦截，可以尝试：
-1. 增大 `DELAY_BETWEEN_PAGES` 和 `DELAY_BETWEEN_VARIANTS` 的值
-2. 在 `crawl.js` 中切换为 `headless: false` 本地调试（可以手动过验证码）
-3. 使用代理（在 GitHub Actions 的环境变量中设置 `PROXY_URL`）
+If you still get blocked, try:
+1. Increase `DELAY_BETWEEN_PAGES` and `DELAY_BETWEEN_VARIANTS`
+2. Switch to `headless: false` in `crawl.js` for local debugging (you can solve CAPTCHAs manually)
+3. Use a proxy (set `PROXY_URL` in GitHub Actions environment variables)
 
-### 直链的有效期是多久？
+### How long do direct links stay valid?
 
-APKMirror 的直链通常在 24-48 小时内有效。因此建议每天更新一次。如果直链失效，App 会自动回退到网页引导，不影响使用。
+APKMirror direct links are usually valid for 24–48 hours. That’s why a daily update is recommended. If a direct link expires, the app will automatically fall back to the web flow, so usage is not impacted.
 
-### 如何添加新的设备适配规则？
+### How do I add new device-matching rules?
 
-编辑 `crawl.js` 顶部的 `TARGET_COMBINATIONS` 数组：
+Edit the `TARGET_COMBINATIONS` array at the top of `crawl.js`:
 
 ```javascript
 const TARGET_COMBINATIONS = [
-  // 增加一条规则
-  { arch: "x86_64", minAndroid: "13.0", label: "x86_64 / Android 13+ (模拟器)" },
+  // Add a rule
+  { arch: "x86_64", minAndroid: "13.0", label: "x86_64 / Android 13+ (emulator)" },
 ];
 ```
 
-### 如何只更新某一个包？
+### Can I update only one package?
 
-目前不支持单独更新。但你可以修改 `config/packages.json`，临时注释掉不需要更新的包。
+Not currently. As a workaround, edit `config/packages.json` and temporarily comment out packages you don’t want to update.
 
-### GitHub Actions 运行超时
+### GitHub Actions timeout
 
-默认超时 30 分钟。如果包变体很多，爬取时间可能较长。可以在 workflow 中调整：
+The default timeout is 30 minutes. If there are many variants, crawling can take longer. You can adjust it in the workflow:
 
 ```yaml
 timeout-minutes: 45
 ```
 
-## 维护建议
+## Maintenance tips
 
-- **每月检查一次** Actions 运行日志，确认爬虫正常工作
-- 如果 APKMirror 改版导致选择器失效，用 `test-single.js` 调试，更新 `crawl.js` 中的选择器
-- 关注 Google 发布的重大 GMS 更新（尤其是需要新 API level 的版本）
-- 保持 `config/packages.json` 中的 `approx_size_mb` 大致准确
+- **Check Actions logs monthly** to ensure the crawler is running correctly
+- If APKMirror layout changes and selectors break, debug with `test-single.js` and update selectors in `crawl.js`
+- Watch for major GMS releases from Google (especially versions that require a newer API level)
+- Keep `approx_size_mb` in `config/packages.json` roughly accurate
