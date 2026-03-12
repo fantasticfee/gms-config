@@ -41,7 +41,8 @@ const USER_AGENT =
 const DELAY_BETWEEN_PAGES = 3000;     // ms — respects Crawl-delay: 3
 const DELAY_BETWEEN_VARIANTS = 5000;  // ms — extra pause before download-link fetch
 
-// minApi / maxApi are the values written directly into variants.json.
+// deviceApi: the API level of the target device — used for "minSdk ≤ deviceApi" matching.
+// minApi / maxApi: the values written into variants.json for the installer to filter.
 // Android version → API level mapping:
 //   14+  → 34 / null   (no upper bound)
 //   13   → 33 / 33
@@ -49,11 +50,11 @@ const DELAY_BETWEEN_VARIANTS = 5000;  // ms — extra pause before download-link
 //   11   → 30 / 30
 //   armv7/11+ → 30 / null  (covers all armv7 devices regardless of Android ver)
 const TARGET_COMBINATIONS = [
-  { arch: "arm64-v8a",   minAndroid: "14.0", minApi: 34, maxApi: null, label: "arm64-v8a / Android 14+" },
-  { arch: "arm64-v8a",   minAndroid: "13.0", minApi: 33, maxApi: 33,   label: "arm64-v8a / Android 13"  },
-  { arch: "arm64-v8a",   minAndroid: "12.0", minApi: 31, maxApi: 32,   label: "arm64-v8a / Android 12"  },
-  { arch: "arm64-v8a",   minAndroid: "11.0", minApi: 30, maxApi: 30,   label: "arm64-v8a / Android 11"  },
-  { arch: "armeabi-v7a", minAndroid: "11.0", minApi: 30, maxApi: null, label: "armv7 / Android 11+"     },
+  { arch: "arm64-v8a",   deviceApi: 34, minApi: 34, maxApi: null, label: "arm64-v8a / Android 14+" },
+  { arch: "arm64-v8a",   deviceApi: 33, minApi: 33, maxApi: 33,   label: "arm64-v8a / Android 13"  },
+  { arch: "arm64-v8a",   deviceApi: 31, minApi: 31, maxApi: 32,   label: "arm64-v8a / Android 12"  },
+  { arch: "arm64-v8a",   deviceApi: 30, minApi: 30, maxApi: 30,   label: "arm64-v8a / Android 11"  },
+  { arch: "armeabi-v7a", deviceApi: 30, minApi: 30, maxApi: null, label: "armv7 / Android 11+"     },
 ];
 
 // ============================================================
@@ -73,10 +74,15 @@ function logError(msg) {
 }
 
 /**
- * Parse "Android 14.0+" / "5.0+" / "minSdk 33" style strings into a number.
+ * Parse "Android 14.0+" / "Android 12L+" / "5.0+" / "minSdk 33" style strings
+ * into a float version number. Android 12L maps to 12.1.
  * Returns 0 when nothing is recognised (= no Android version restriction).
  */
 function parseAndroidVersion(text) {
+  // Android 12L / 12.1 (API 32)
+  const androidLMatch = text.match(/android\s+(\d+)L/i);
+  if (androidLMatch) return parseFloat(androidLMatch[1]) + 0.1;
+
   const androidMatch = text.match(/android\s+(\d+(?:\.\d+)?)/i);
   if (androidMatch) return parseFloat(androidMatch[1]);
 
@@ -86,14 +92,41 @@ function parseAndroidVersion(text) {
   const apiMatch = text.match(/(?:minSdk|api)\s*(\d+)/i);
   if (apiMatch) {
     const api = parseInt(apiMatch[1]);
+    if (api >= 35) return 15.0;
     if (api >= 34) return 14.0;
     if (api >= 33) return 13.0;
+    if (api >= 32) return 12.1; // Android 12L
     if (api >= 31) return 12.0;
     if (api >= 30) return 11.0;
+    if (api >= 29) return 10.0;
     if (api >= 21) return 5.0;
     return parseFloat((api / 10).toFixed(1));
   }
 
+  return 0;
+}
+
+/**
+ * Convert an Android float version (as returned by parseAndroidVersion) to
+ * its corresponding API level, for "minSdk ≤ deviceApi" compatibility checks.
+ */
+function androidVersionToApi(ver) {
+  if (ver >= 15)  return 35;
+  if (ver >= 14)  return 34;
+  if (ver >= 13)  return 33;
+  if (ver >= 12.1) return 32; // Android 12L
+  if (ver >= 12)  return 31;
+  if (ver >= 11)  return 30;
+  if (ver >= 10)  return 29;
+  if (ver >= 9)   return 28;
+  if (ver >= 8.1) return 27;
+  if (ver >= 8)   return 26;
+  if (ver >= 7.1) return 25;
+  if (ver >= 7)   return 24;
+  if (ver >= 6)   return 23;
+  if (ver >= 5.1) return 22;
+  if (ver >= 5)   return 21;
+  if (ver >= 4.4) return 19;
   return 0;
 }
 
@@ -268,6 +301,11 @@ class ApkMirrorCrawler {
   /**
    * Parse the variant table from a version page.
    *
+   * Three extraction strategies are tried in order:
+   *   1. Structured .variants-table rows (primary)
+   *   2. Alternative row selectors (.appRow / .apkRow / listWidget)
+   *   3. Scan all -download/ links scoped to this release path (last resort)
+   *
    * Results are cached to cache/<url-hash>.json so re-runs after a selector
    * fix replay local data without hitting the live site.
    *
@@ -284,32 +322,75 @@ class ApkMirrorCrawler {
     const ok = await this.navigateWithRetry(versionUrl);
     if (!ok) return [];
 
+    // Wait for the variant section to actually render after any challenge
     try {
-      // Method 1: structured variants-table
+      await this.page.waitForSelector(
+        '.variants-table, .table-row, .apkRow, .appRow, [class*="variant"]',
+        { timeout: 10000 }
+      );
+    } catch {
+      const title = await this.page.title().catch(() => "?");
+      log(`  ⚠️  Variant section not visible within 10 s (title="${title}") — proceeding anyway.`);
+    }
+
+    // Debug: confirm we're on the right page
+    const pageTitle = await this.page.title().catch(() => "?");
+    log(`  Page: "${pageTitle}"`);
+
+    try {
+      // ── Method 1: structured .variants-table ──────────────────
       let variants = await this.page.$$eval(
-        ".variants-table .table-row",
+        ".variants-table .table-row:not(.headerFont)",
         (rows) => {
           const results = [];
           for (const row of rows) {
-            if (row.classList.contains("headerFont")) continue;
-            const cells = row.querySelectorAll(".table-cell");
+            const cells = Array.from(row.querySelectorAll(".table-cell"));
+            if (cells.length < 2) continue;
             const link =
               row.querySelector('a[href*="-download"]') ||
-              row.querySelector("a.accent_color");
+              row.querySelector("a.accent_color") ||
+              row.querySelector('a[href*="/apk/"]');
             if (!link) continue;
             results.push({
               label: cells[0]?.textContent?.trim() || link.textContent?.trim() || "",
-              arch: cells[1]?.textContent?.trim() || "",
+              arch:    cells[1]?.textContent?.trim() || "",
               android: cells[2]?.textContent?.trim() || "",
-              dpi: cells[3]?.textContent?.trim() || "",
+              dpi:     cells[3]?.textContent?.trim() || "",
               pageUrl: link.getAttribute("href"),
             });
           }
           return results;
         }
-      );
+      ).catch(() => []);
 
-      // Method 2: scan for -download/ links scoped to this release path
+      // ── Method 1b: alternative row-level selectors ────────────
+      if (variants.length === 0) {
+        variants = await this.page.$$eval(
+          ".apkRow, .appRow, [class*='variant-row'], [class*='variantRow'], " +
+          ".widgetInfo .table-row:not(.headerFont)",
+          (rows) => {
+            const results = [];
+            for (const row of rows) {
+              const link =
+                row.querySelector('a[href*="-download"]') ||
+                row.querySelector("a.accent_color");
+              if (!link) continue;
+              const cells = Array.from(row.querySelectorAll(".table-cell, td"));
+              const rowText = row.textContent || "";
+              results.push({
+                label:   cells[0]?.textContent?.trim() || link.textContent?.trim() || "",
+                arch:    cells[1]?.textContent?.trim() || rowText,
+                android: cells[2]?.textContent?.trim() || rowText,
+                dpi:     cells[3]?.textContent?.trim() || rowText,
+                pageUrl: link.getAttribute("href"),
+              });
+            }
+            return results;
+          }
+        ).catch(() => []);
+      }
+
+      // ── Method 2: scan -download/ links (last resort) ─────────
       if (variants.length === 0) {
         log("  Fallback: scanning -download links...");
         let releasePath = "";
@@ -334,27 +415,28 @@ class ApkMirrorCrawler {
               if (seen.has(clean)) continue;
               seen.add(clean);
               const row =
-                a.closest("tr, .table-row, .appRow") || a.parentElement;
+                a.closest("tr, .table-row, .appRow, .apkRow") || a.parentElement;
               const rowText = row ? row.textContent : "";
               results.push({
-                label: a.textContent?.trim() || clean,
-                arch: rowText,
+                label:   a.textContent?.trim() || clean,
+                arch:    rowText,
                 android: rowText,
-                dpi: rowText,
+                dpi:     rowText,
                 pageUrl: clean,
               });
             }
             return results;
           },
           releasePath
-        );
+        ).catch(() => []);
       }
 
+      // ── Normalise raw rows ────────────────────────────────────
       const parsed = variants.map((v) => ({
-        label: v.label,
-        arch: extractArch(v.arch),
-        minAndroid: parseAndroidVersion(v.android),
-        dpi: extractDpi(v.dpi),
+        label:      v.label,
+        arch:       extractArch(v.arch || v.label),
+        minAndroid: parseAndroidVersion(v.android || v.label),
+        dpi:        extractDpi(v.dpi || v.label),
         pageUrl: v.pageUrl
           ? v.pageUrl.startsWith("http")
             ? v.pageUrl
@@ -491,17 +573,43 @@ class ApkMirrorCrawler {
   }
 
   /**
-   * Select variants from a parsed list that match an arch + minAndroid target.
-   * Accepts "universal" and "unknown" (single-APK packages) as arch wildcards.
+   * Choose the single best variant for a target device from a parsed list.
+   *
+   * Compatibility rule: variantMinApi ≤ target.deviceApi
+   *   → "Android 12+" (API 31) IS compatible with an Android 14 (API 34) device.
+   *
+   * Priority (descending):
+   *   1. Arch score: exact match (3) > universal/noarch (2) > unknown (1) > 0 (incompatible)
+   *   2. minAndroid: higher preferred (more specific to device, smaller download)
+   *   3. APK preferred over bundle when scores are equal
+   *
+   * Returns the best variant object, or null when no compatible variant exists.
    */
-  filterBestVariant(variants, target) {
-    return variants.filter((v) => {
-      const archOk =
-        v.arch === target.arch || v.arch === "universal" || v.arch === "unknown";
-      if (!archOk) return false;
-      if (v.minAndroid > parseFloat(target.minAndroid)) return false;
-      return true;
+  chooseBestVariant(variants, target) {
+    const archScore = (variantArch) => {
+      if (variantArch === target.arch)                         return 3;
+      if (variantArch === "universal" || variantArch === "noarch") return 2;
+      if (variantArch === "unknown")                           return 1;
+      return 0;
+    };
+
+    const candidates = variants.filter((v) => {
+      if (archScore(v.arch) === 0) return false;
+      const variantMinApi = androidVersionToApi(v.minAndroid);
+      return variantMinApi <= target.deviceApi;
     });
+
+    if (candidates.length === 0) return null;
+
+    candidates.sort((a, b) => {
+      const as = archScore(a.arch), bs = archScore(b.arch);
+      if (as !== bs) return bs - as;
+      // Higher minAndroid = closer to device = prefer
+      if (b.minAndroid !== a.minAndroid) return b.minAndroid - a.minAndroid;
+      return 0;
+    });
+
+    return candidates[0];
   }
 }
 
@@ -551,7 +659,7 @@ async function main() {
       const disc = await discovery.discoverNewVersions(pkg, pkgState.lastVersion);
 
       if (disc.error) {
-        logError(`  RSS discovery failed: ${disc.error} — retaining existing data.`);
+        logError(`  Discovery failed: ${disc.error} — retaining existing data.`);
         continue;
       }
 
@@ -562,7 +670,8 @@ async function main() {
 
       log(
         `  🆕 ${disc.newVersions.length} new version(s): ` +
-          disc.newVersions.map((v) => v.version).join(", ")
+          disc.newVersions.map((v) => v.version).join(", ") +
+          (disc.discoverySource ? `  [via ${disc.discoverySource}]` : "")
       );
 
       // ── Phase 2: Detail extraction — browser only if needed ──
@@ -572,28 +681,40 @@ async function main() {
       }
 
       const packageVariants = [];
-      const processedUrls = new Set(); // avoid re-fetching the same APK page
+      const processedUrls = new Set(); // avoid re-fetching the same APK download page
 
+      // ── Phase 2a: fetch each release URL ONCE, cache variants in memory ──
+      //   Never re-open the same page per-target — that triggers challenge loops.
+      log("\n  Pre-fetching variant tables (one fetch per release URL)...");
+      const versionVariantMap = new Map();
+      for (const versionInfo of disc.newVersions) {
+        if (versionVariantMap.has(versionInfo.url)) continue;
+        await sleep(DELAY_BETWEEN_PAGES);
+        const variants = await crawler.getVariants(versionInfo.url);
+        versionVariantMap.set(versionInfo.url, variants);
+        log(
+          `  📦 ${versionInfo.version}: ${variants.length} variant(s) cached.`
+        );
+      }
+
+      // ── Phase 2b: match targets locally — no additional browser fetches ──
       for (const target of TARGET_COMBINATIONS) {
         log(`\n  Target: ${target.label}`);
         let foundMatch = false;
 
         for (const versionInfo of disc.newVersions) {
-          await sleep(DELAY_BETWEEN_PAGES);
-          const allVariants = await crawler.getVariants(versionInfo.url);
+          const allVariants = versionVariantMap.get(versionInfo.url) || [];
 
           if (allVariants.length === 0) {
-            log(`    ${versionInfo.version}: no variants (blocked or parse failure).`);
+            log(`    ${versionInfo.version}: no variants — skipping.`);
             continue;
           }
 
-          const matched = crawler.filterBestVariant(allVariants, target);
-          if (matched.length === 0) {
-            log(`    ${versionInfo.version}: no matching variant.`);
+          const best = crawler.chooseBestVariant(allVariants, target);
+          if (!best) {
+            log(`    ${versionInfo.version}: no compatible variant for ${target.label}.`);
             continue;
           }
-
-          const best = matched[0];
 
           // Reuse already-fetched direct URL when the same APK serves multiple targets
           if (processedUrls.has(best.pageUrl)) {
@@ -620,7 +741,7 @@ async function main() {
           processedUrls.add(best.pageUrl);
           log(
             `    Best match: ${best.label}` +
-              `  arch=${best.arch}  Android ${best.minAndroid}+  dpi=${best.dpi}`
+              `  arch=${best.arch}  minAndroid=${best.minAndroid}+  dpi=${best.dpi}`
           );
 
           await sleep(DELAY_BETWEEN_VARIANTS);
@@ -632,7 +753,7 @@ async function main() {
             min_api: target.minApi,
             max_api: target.maxApi,
             abis:
-              target.arch === "universal" || best.arch === "unknown"
+              best.arch === "universal" || best.arch === "noarch" || best.arch === "unknown"
                 ? ["arm64-v8a", "armeabi-v7a", "x86_64", "x86"]
                 : [target.arch],
             dpi: best.dpi,
