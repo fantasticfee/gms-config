@@ -143,77 +143,92 @@
     "store": {
       "name": "Google Play Store",
       "package_name": "com.android.vending",
-      "version": "Google Play Store 50.4.17",
+      "version": "Google Play Store 50.4.17 by Google LLC",
       "install_order": 3,
       "variants": [
         {
-          "variant_label": "Google Play Store 50.4.17 / arm64-v8a / Android 14+",
-          "version": "Google Play Store 50.4.17",
+          "variant_label": "Google Play Store 50.4.17 by Google LLC / arm64-v8a / Android 14+",
+          "version": "Google Play Store 50.4.17 by Google LLC",
           "min_api": 34,
           "max_api": null,
           "abis": [
-            "arm64-v8a"
+            "arm64-v8a",
+            "armeabi-v7a",
+            "x86_64",
+            "x86"
           ],
           "dpi": "nodpi",
           "file_size_mb": 35,
-          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-store/google-play-store-50-4-17-release/google-play-store-50-4-17-24-0-pr-877544065-3-android-apk-download/",
-          "direct_url": "https://www.apkmirror.com/wp-content/themes/APKMirror/download.php?id=12825576&key=1e12d7399749fb5923d82a60116fd6f111a987bd",
+          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-store/google-play-store-50-4-17-release/",
+          "direct_url": null,
           "sha256": null
         },
         {
-          "variant_label": "Google Play Store 50.4.17 / arm64-v8a / Android 13",
-          "version": "Google Play Store 50.4.17",
-          "min_api": 34,
-          "max_api": null,
+          "variant_label": "Google Play Store 50.4.17 by Google LLC / arm64-v8a / Android 13",
+          "version": "Google Play Store 50.4.17 by Google LLC",
+          "min_api": 33,
+          "max_api": 33,
           "abis": [
-            "arm64-v8a"
+            "arm64-v8a",
+            "armeabi-v7a",
+            "x86_64",
+            "x86"
           ],
           "dpi": "nodpi",
           "file_size_mb": 35,
-          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-store/google-play-store-50-4-17-release/google-play-store-50-4-17-24-0-pr-877544065-3-android-apk-download/",
-          "direct_url": "https://www.apkmirror.com/wp-content/themes/APKMirror/download.php?id=12825576&key=1e12d7399749fb5923d82a60116fd6f111a987bd",
+          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-store/google-play-store-50-4-17-release/",
+          "direct_url": null,
           "sha256": null
         },
         {
-          "variant_label": "Google Play Store 50.4.17 / arm64-v8a / Android 12",
-          "version": "Google Play Store 50.4.17",
-          "min_api": 34,
-          "max_api": null,
+          "variant_label": "Google Play Store 50.4.17 by Google LLC / arm64-v8a / Android 12",
+          "version": "Google Play Store 50.4.17 by Google LLC",
+          "min_api": 31,
+          "max_api": 32,
           "abis": [
-            "arm64-v8a"
+            "arm64-v8a",
+            "armeabi-v7a",
+            "x86_64",
+            "x86"
           ],
           "dpi": "nodpi",
           "file_size_mb": 35,
-          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-store/google-play-store-50-4-17-release/google-play-store-50-4-17-24-0-pr-877544065-3-android-apk-download/",
-          "direct_url": "https://www.apkmirror.com/wp-content/themes/APKMirror/download.php?id=12825576&key=1e12d7399749fb5923d82a60116fd6f111a987bd",
+          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-store/google-play-store-50-4-17-release/",
+          "direct_url": null,
           "sha256": null
         },
         {
-          "variant_label": "Google Play Store 50.4.17 / arm64-v8a / Android 11",
-          "version": "Google Play Store 50.4.17",
+          "variant_label": "Google Play Store 50.4.17 by Google LLC / arm64-v8a / Android 11",
+          "version": "Google Play Store 50.4.17 by Google LLC",
+          "min_api": 30,
+          "max_api": 30,
+          "abis": [
+            "arm64-v8a",
+            "armeabi-v7a",
+            "x86_64",
+            "x86"
+          ],
+          "dpi": "nodpi",
+          "file_size_mb": 35,
+          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-store/google-play-store-50-4-17-release/",
+          "direct_url": null,
+          "sha256": null
+        },
+        {
+          "variant_label": "Google Play Store 50.4.17 by Google LLC / armv7 / Android 11+",
+          "version": "Google Play Store 50.4.17 by Google LLC",
           "min_api": 30,
           "max_api": null,
           "abis": [
-            "arm64-v8a"
+            "arm64-v8a",
+            "armeabi-v7a",
+            "x86_64",
+            "x86"
           ],
           "dpi": "nodpi",
           "file_size_mb": 35,
-          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-store/google-play-store-50-4-17-release/google-play-store-50-4-17-24-0-pr-877544065-2-android-apk-download/",
-          "direct_url": "https://www.apkmirror.com/wp-content/themes/APKMirror/download.php?id=12825565&key=e6b4a6e4e1e711345a7e9ff8086cdd244be45113",
-          "sha256": null
-        },
-        {
-          "variant_label": "Google Play Store 50.4.17 / armv7 / Android 11+",
-          "version": "Google Play Store 50.4.17",
-          "min_api": 30,
-          "max_api": null,
-          "abis": [
-            "arm64-v8a"
-          ],
-          "dpi": "nodpi",
-          "file_size_mb": 35,
-          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-store/google-play-store-50-4-17-release/google-play-store-50-4-17-24-0-pr-877544065-2-android-apk-download/",
-          "direct_url": "https://www.apkmirror.com/wp-content/themes/APKMirror/download.php?id=12825565&key=e6b4a6e4e1e711345a7e9ff8086cdd244be45113",
+          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-store/google-play-store-50-4-17-release/",
+          "direct_url": null,
           "sha256": null
         }
       ]
