@@ -83,48 +83,6 @@
           "sha256": null
         },
         {
-          "variant_label": "Google Play services 26.09.62 / arm64-v8a / Android 13",
-          "version": "Google Play services 26.09.62",
-          "min_api": 34,
-          "max_api": null,
-          "abis": [
-            "arm64-v8a"
-          ],
-          "dpi": "480dpi",
-          "file_size_mb": 60,
-          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-services/google-play-services-26-09-62-release/google-play-services-26-09-62-040400-879789548-android-apk-download/",
-          "direct_url": null,
-          "sha256": null
-        },
-        {
-          "variant_label": "Google Play services 26.09.62 / arm64-v8a / Android 12",
-          "version": "Google Play services 26.09.62",
-          "min_api": 34,
-          "max_api": null,
-          "abis": [
-            "arm64-v8a"
-          ],
-          "dpi": "480dpi",
-          "file_size_mb": 60,
-          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-services/google-play-services-26-09-62-release/google-play-services-26-09-62-040400-879789548-android-apk-download/",
-          "direct_url": null,
-          "sha256": null
-        },
-        {
-          "variant_label": "Google Play services 26.09.62 / arm64-v8a / Android 11",
-          "version": "Google Play services 26.09.62",
-          "min_api": 34,
-          "max_api": null,
-          "abis": [
-            "arm64-v8a"
-          ],
-          "dpi": "480dpi",
-          "file_size_mb": 60,
-          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-services/google-play-services-26-09-62-release/google-play-services-26-09-62-040400-879789548-android-apk-download/",
-          "direct_url": null,
-          "sha256": null
-        },
-        {
           "variant_label": "Google Play services 26.09.31 / armv7 / Android 11+",
           "version": "Google Play services 26.09.31",
           "min_api": 30,
