@@ -1,6 +1,6 @@
 {
   "config_version": 2,
-  "updated_at": "2026-03-11",
+  "updated_at": "2026-03-12",
   "generated_by": "gms-config-crawler",
   "packages": {
     "gsf": {
@@ -23,7 +23,7 @@
           "dpi": "nodpi",
           "file_size_mb": 3,
           "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-services-framework/google-services-framework-14-13361510-release/google-services-framework-14-13361510-android-apk-download/",
-          "direct_url": "https://www.apkmirror.com/wp-content/themes/APKMirror/download.php?id=12034778&key=9f6256f576b3f861a6b3d67543b6d9e7eb048834",
+          "direct_url": null,
           "sha256": null
         },
         {
@@ -40,7 +40,7 @@
           "dpi": "nodpi",
           "file_size_mb": 3,
           "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-services-framework/google-services-framework-12-release/google-services-framework-12-android-apk-download/",
-          "direct_url": "https://www.apkmirror.com/wp-content/themes/APKMirror/download.php?id=2438387&key=336ad09db4d64f60955427eb9da96add957b5945",
+          "direct_url": "https://www.apkmirror.com/wp-content/themes/APKMirror/download.php?id=2438387&key=008a0b710e203016c41434756cd1fd94b15bf40a",
           "sha256": null
         },
         {
@@ -57,7 +57,7 @@
           "dpi": "nodpi",
           "file_size_mb": 3,
           "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-services-framework/google-services-framework-12-release/google-services-framework-12-android-apk-download/",
-          "direct_url": "https://www.apkmirror.com/wp-content/themes/APKMirror/download.php?id=2438387&key=336ad09db4d64f60955427eb9da96add957b5945",
+          "direct_url": "https://www.apkmirror.com/wp-content/themes/APKMirror/download.php?id=2438387&key=008a0b710e203016c41434756cd1fd94b15bf40a",
           "sha256": null
         }
       ]
@@ -135,7 +135,7 @@
           "dpi": "160dpi",
           "file_size_mb": 60,
           "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-services/google-play-services-26-09-31-release/google-play-services-26-09-31-040300-877989800-android-apk-download/",
-          "direct_url": "https://www.apkmirror.com/wp-content/themes/APKMirror/download.php?id=12832235&key=cc75f78d8187d88eed1c3a417ea61f13ad7c9238",
+          "direct_url": "https://www.apkmirror.com/wp-content/themes/APKMirror/download.php?id=12832235&key=7c9f522aee7d0b9f05c6704862339251d94b47db",
           "sha256": null
         }
       ]
@@ -157,7 +157,7 @@
           "dpi": "nodpi",
           "file_size_mb": 35,
           "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-store/google-play-store-50-4-17-release/google-play-store-50-4-17-24-0-pr-877544065-3-android-apk-download/",
-          "direct_url": "https://www.apkmirror.com/wp-content/themes/APKMirror/download.php?id=12825576&key=e430676d93d5245e8fd7f4fea78712ace1506fcd",
+          "direct_url": "https://www.apkmirror.com/wp-content/themes/APKMirror/download.php?id=12825576&key=1e12d7399749fb5923d82a60116fd6f111a987bd",
           "sha256": null
         },
         {
@@ -171,7 +171,7 @@
           "dpi": "nodpi",
           "file_size_mb": 35,
           "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-store/google-play-store-50-4-17-release/google-play-store-50-4-17-24-0-pr-877544065-3-android-apk-download/",
-          "direct_url": "https://www.apkmirror.com/wp-content/themes/APKMirror/download.php?id=12825576&key=e430676d93d5245e8fd7f4fea78712ace1506fcd",
+          "direct_url": "https://www.apkmirror.com/wp-content/themes/APKMirror/download.php?id=12825576&key=1e12d7399749fb5923d82a60116fd6f111a987bd",
           "sha256": null
         },
         {
@@ -185,7 +185,7 @@
           "dpi": "nodpi",
           "file_size_mb": 35,
           "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-store/google-play-store-50-4-17-release/google-play-store-50-4-17-24-0-pr-877544065-3-android-apk-download/",
-          "direct_url": "https://www.apkmirror.com/wp-content/themes/APKMirror/download.php?id=12825576&key=e430676d93d5245e8fd7f4fea78712ace1506fcd",
+          "direct_url": "https://www.apkmirror.com/wp-content/themes/APKMirror/download.php?id=12825576&key=1e12d7399749fb5923d82a60116fd6f111a987bd",
           "sha256": null
         },
         {
@@ -199,7 +199,7 @@
           "dpi": "nodpi",
           "file_size_mb": 35,
           "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-store/google-play-store-50-4-17-release/google-play-store-50-4-17-24-0-pr-877544065-2-android-apk-download/",
-          "direct_url": "https://www.apkmirror.com/wp-content/themes/APKMirror/download.php?id=12825565&key=626e8fc405a106342f3ba7265e972bca6b312edd",
+          "direct_url": "https://www.apkmirror.com/wp-content/themes/APKMirror/download.php?id=12825565&key=e6b4a6e4e1e711345a7e9ff8086cdd244be45113",
           "sha256": null
         },
         {
@@ -208,12 +208,12 @@
           "min_api": 30,
           "max_api": null,
           "abis": [
-            "armeabi-v7a"
+            "arm64-v8a"
           ],
           "dpi": "nodpi",
           "file_size_mb": 35,
-          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-store/google-play-store-50-4-17-release/google-play-store-50-4-17-24-0-pr-877544065-android-apk-download/",
-          "direct_url": "https://www.apkmirror.com/wp-content/themes/APKMirror/download.php?id=12825559&key=9de9c0cdd9145a6c6f36718c51c7d9655144a090&forcebaseapk=true",
+          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-store/google-play-store-50-4-17-release/google-play-store-50-4-17-24-0-pr-877544065-2-android-apk-download/",
+          "direct_url": "https://www.apkmirror.com/wp-content/themes/APKMirror/download.php?id=12825565&key=e6b4a6e4e1e711345a7e9ff8086cdd244be45113",
           "sha256": null
         }
       ]
