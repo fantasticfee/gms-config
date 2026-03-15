@@ -1,6 +1,6 @@
 {
   "config_version": 2,
-  "updated_at": "2026-03-14",
+  "updated_at": "2026-03-15",
   "generated_by": "gms-config-crawler",
   "packages": {
     "gsf": {
@@ -135,12 +135,12 @@
     "store": {
       "name": "Google Play Store",
       "package_name": "com.android.vending",
-      "version": "Google Play Store 50.4.18 by Google LLC",
+      "version": "Google Play Store 50.5.19 by Google LLC",
       "install_order": 3,
       "variants": [
         {
-          "variant_label": "Google Play Store 50.4.18 by Google LLC / arm64-v8a / Android 14+",
-          "version": "Google Play Store 50.4.18 by Google LLC",
+          "variant_label": "Google Play Store 50.5.19 by Google LLC / arm64-v8a / Android 14+",
+          "version": "Google Play Store 50.5.19 by Google LLC",
           "min_api": 34,
           "max_api": null,
           "abis": [
@@ -151,13 +151,13 @@
           ],
           "dpi": "nodpi",
           "file_size_mb": 35,
-          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-store/google-play-store-50-4-18-release/",
+          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-store/google-play-store-50-5-19-release/",
           "direct_url": null,
           "sha256": null
         },
         {
-          "variant_label": "Google Play Store 50.4.18 by Google LLC / arm64-v8a / Android 13",
-          "version": "Google Play Store 50.4.18 by Google LLC",
+          "variant_label": "Google Play Store 50.5.19 by Google LLC / arm64-v8a / Android 13",
+          "version": "Google Play Store 50.5.19 by Google LLC",
           "min_api": 33,
           "max_api": 33,
           "abis": [
@@ -168,13 +168,13 @@
           ],
           "dpi": "nodpi",
           "file_size_mb": 35,
-          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-store/google-play-store-50-4-18-release/",
+          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-store/google-play-store-50-5-19-release/",
           "direct_url": null,
           "sha256": null
         },
         {
-          "variant_label": "Google Play Store 50.4.18 by Google LLC / arm64-v8a / Android 12",
-          "version": "Google Play Store 50.4.18 by Google LLC",
+          "variant_label": "Google Play Store 50.5.19 by Google LLC / arm64-v8a / Android 12",
+          "version": "Google Play Store 50.5.19 by Google LLC",
           "min_api": 31,
           "max_api": 32,
           "abis": [
@@ -185,13 +185,13 @@
           ],
           "dpi": "nodpi",
           "file_size_mb": 35,
-          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-store/google-play-store-50-4-18-release/",
+          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-store/google-play-store-50-5-19-release/",
           "direct_url": null,
           "sha256": null
         },
         {
-          "variant_label": "Google Play Store 50.4.18 by Google LLC / arm64-v8a / Android 11",
-          "version": "Google Play Store 50.4.18 by Google LLC",
+          "variant_label": "Google Play Store 50.5.19 by Google LLC / arm64-v8a / Android 11",
+          "version": "Google Play Store 50.5.19 by Google LLC",
           "min_api": 30,
           "max_api": 30,
           "abis": [
@@ -202,13 +202,13 @@
           ],
           "dpi": "nodpi",
           "file_size_mb": 35,
-          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-store/google-play-store-50-4-18-release/",
+          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-store/google-play-store-50-5-19-release/",
           "direct_url": null,
           "sha256": null
         },
         {
-          "variant_label": "Google Play Store 50.4.18 by Google LLC / armv7 / Android 11+",
-          "version": "Google Play Store 50.4.18 by Google LLC",
+          "variant_label": "Google Play Store 50.5.19 by Google LLC / armv7 / Android 11+",
+          "version": "Google Play Store 50.5.19 by Google LLC",
           "min_api": 30,
           "max_api": null,
           "abis": [
@@ -219,7 +219,7 @@
           ],
           "dpi": "nodpi",
           "file_size_mb": 35,
-          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-store/google-play-store-50-4-18-release/",
+          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-store/google-play-store-50-5-19-release/",
           "direct_url": null,
           "sha256": null
         }
