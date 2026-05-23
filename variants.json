@@ -1,6 +1,6 @@
 {
   "config_version": 2,
-  "updated_at": "2026-05-22",
+  "updated_at": "2026-05-23",
   "generated_by": "gms-config-crawler",
   "packages": {
     "gsf": {
@@ -22,7 +22,7 @@
           ],
           "dpi": "nodpi",
           "file_size_mb": 3,
-          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-services-framework/google-services-framework-16-release/",
+          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-services-framework/google-services-framework-17-release/",
           "direct_url": null,
           "sha256": null
         },
@@ -39,7 +39,7 @@
           ],
           "dpi": "nodpi",
           "file_size_mb": 3,
-          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-services-framework/google-services-framework-16-release/",
+          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-services-framework/google-services-framework-17-release/",
           "direct_url": null,
           "sha256": null
         },
@@ -56,7 +56,7 @@
           ],
           "dpi": "nodpi",
           "file_size_mb": 3,
-          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-services-framework/google-services-framework-16-release/",
+          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-services-framework/google-services-framework-17-release/",
           "direct_url": null,
           "sha256": null
         },
@@ -73,7 +73,7 @@
           ],
           "dpi": "nodpi",
           "file_size_mb": 3,
-          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-services-framework/google-services-framework-16-release/",
+          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-services-framework/google-services-framework-17-release/",
           "direct_url": null,
           "sha256": null
         },
@@ -90,7 +90,7 @@
           ],
           "dpi": "nodpi",
           "file_size_mb": 3,
-          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-services-framework/google-services-framework-16-release/",
+          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-services-framework/google-services-framework-17-release/",
           "direct_url": null,
           "sha256": null
         }
