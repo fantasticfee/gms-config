@@ -1,6 +1,6 @@
 {
   "config_version": 2,
-  "updated_at": "2026-07-09",
+  "updated_at": "2026-07-10",
   "generated_by": "gms-config-crawler",
   "packages": {
     "gsf": {
@@ -115,7 +115,7 @@
           ],
           "dpi": "nodpi",
           "file_size_mb": 60,
-          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-services/google-play-services-26-26-33-release/",
+          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-services-android-automotive/google-play-services-android-automotive-26-25-32-release/",
           "direct_url": null,
           "sha256": null
         },
@@ -132,7 +132,7 @@
           ],
           "dpi": "nodpi",
           "file_size_mb": 60,
-          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-services/google-play-services-26-26-33-release/",
+          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-services-android-automotive/google-play-services-android-automotive-26-25-32-release/",
           "direct_url": null,
           "sha256": null
         },
@@ -149,7 +149,7 @@
           ],
           "dpi": "nodpi",
           "file_size_mb": 60,
-          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-services/google-play-services-26-26-33-release/",
+          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-services-android-automotive/google-play-services-android-automotive-26-25-32-release/",
           "direct_url": null,
           "sha256": null
         },
@@ -166,7 +166,7 @@
           ],
           "dpi": "nodpi",
           "file_size_mb": 60,
-          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-services/google-play-services-26-26-33-release/",
+          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-services-android-automotive/google-play-services-android-automotive-26-25-32-release/",
           "direct_url": null,
           "sha256": null
         },
@@ -183,7 +183,7 @@
           ],
           "dpi": "nodpi",
           "file_size_mb": 60,
-          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-services/google-play-services-26-26-33-release/",
+          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-services-android-automotive/google-play-services-android-automotive-26-25-32-release/",
           "direct_url": null,
           "sha256": null
         }
