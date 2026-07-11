@@ -1,6 +1,6 @@
 {
   "config_version": 2,
-  "updated_at": "2026-07-10",
+  "updated_at": "2026-07-11",
   "generated_by": "gms-config-crawler",
   "packages": {
     "gsf": {
@@ -99,12 +99,12 @@
     "gps": {
       "name": "Google Play Services",
       "package_name": "com.google.android.gms",
-      "version": "Google Play services 26.25.32 by Google LLC",
+      "version": "Google Play services 26.26.34 by Google LLC",
       "install_order": 2,
       "variants": [
         {
-          "variant_label": "Google Play services 26.25.32 by Google LLC / arm64-v8a / Android 14+",
-          "version": "Google Play services 26.25.32 by Google LLC",
+          "variant_label": "Google Play services 26.26.34 by Google LLC / arm64-v8a / Android 14+",
+          "version": "Google Play services 26.26.34 by Google LLC",
           "min_api": 34,
           "max_api": null,
           "abis": [
@@ -115,13 +115,13 @@
           ],
           "dpi": "nodpi",
           "file_size_mb": 60,
-          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-services-android-automotive/google-play-services-android-automotive-26-25-32-release/",
+          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-services/google-play-services-26-26-34-release/",
           "direct_url": null,
           "sha256": null
         },
         {
-          "variant_label": "Google Play services 26.25.32 by Google LLC / arm64-v8a / Android 13",
-          "version": "Google Play services 26.25.32 by Google LLC",
+          "variant_label": "Google Play services 26.26.34 by Google LLC / arm64-v8a / Android 13",
+          "version": "Google Play services 26.26.34 by Google LLC",
           "min_api": 33,
           "max_api": 33,
           "abis": [
@@ -132,13 +132,13 @@
           ],
           "dpi": "nodpi",
           "file_size_mb": 60,
-          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-services-android-automotive/google-play-services-android-automotive-26-25-32-release/",
+          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-services/google-play-services-26-26-34-release/",
           "direct_url": null,
           "sha256": null
         },
         {
-          "variant_label": "Google Play services 26.25.32 by Google LLC / arm64-v8a / Android 12",
-          "version": "Google Play services 26.25.32 by Google LLC",
+          "variant_label": "Google Play services 26.26.34 by Google LLC / arm64-v8a / Android 12",
+          "version": "Google Play services 26.26.34 by Google LLC",
           "min_api": 31,
           "max_api": 32,
           "abis": [
@@ -149,13 +149,13 @@
           ],
           "dpi": "nodpi",
           "file_size_mb": 60,
-          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-services-android-automotive/google-play-services-android-automotive-26-25-32-release/",
+          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-services/google-play-services-26-26-34-release/",
           "direct_url": null,
           "sha256": null
         },
         {
-          "variant_label": "Google Play services 26.25.32 by Google LLC / arm64-v8a / Android 11",
-          "version": "Google Play services 26.25.32 by Google LLC",
+          "variant_label": "Google Play services 26.26.34 by Google LLC / arm64-v8a / Android 11",
+          "version": "Google Play services 26.26.34 by Google LLC",
           "min_api": 30,
           "max_api": 30,
           "abis": [
@@ -166,13 +166,13 @@
           ],
           "dpi": "nodpi",
           "file_size_mb": 60,
-          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-services-android-automotive/google-play-services-android-automotive-26-25-32-release/",
+          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-services/google-play-services-26-26-34-release/",
           "direct_url": null,
           "sha256": null
         },
         {
-          "variant_label": "Google Play services 26.25.32 by Google LLC / armv7 / Android 11+",
-          "version": "Google Play services 26.25.32 by Google LLC",
+          "variant_label": "Google Play services 26.26.34 by Google LLC / armv7 / Android 11+",
+          "version": "Google Play services 26.26.34 by Google LLC",
           "min_api": 30,
           "max_api": null,
           "abis": [
@@ -183,7 +183,7 @@
           ],
           "dpi": "nodpi",
           "file_size_mb": 60,
-          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-services-android-automotive/google-play-services-android-automotive-26-25-32-release/",
+          "download_page_url": "https://www.apkmirror.com/apk/google-inc/google-play-services/google-play-services-26-26-34-release/",
           "direct_url": null,
           "sha256": null
         }
