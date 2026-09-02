@@ -1,6 +1,6 @@
 {
   "config_version": 2,
-  "updated_at": "2026-09-01",
+  "updated_at": "2026-09-02",
   "generated_by": "gms-config-crawler",
   "packages": {
     "gsf": {
@@ -192,12 +192,12 @@
     "store": {
       "name": "Google Play Store",
       "package_name": "com.android.vending",
-      "version": "8.0.22",
+      "version": "Google Play Store 52.9.21 by Google LLC",
       "install_order": 3,
       "variants": [
         {
-          "variant_label": "8.0.22 / arm64-v8a / Android 14+",
-          "version": "8.0.22",
+          "variant_label": "Google Play Store 52.9.21 by Google LLC / arm64-v8a / Android 14+",
+          "version": "Google Play Store 52.9.21 by Google LLC",
           "min_api": 34,
           "max_api": null,
           "abis": [
@@ -213,8 +213,8 @@
           "sha256": null
         },
         {
-          "variant_label": "8.0.22 / arm64-v8a / Android 13",
-          "version": "8.0.22",
+          "variant_label": "Google Play Store 52.9.21 by Google LLC / arm64-v8a / Android 13",
+          "version": "Google Play Store 52.9.21 by Google LLC",
           "min_api": 33,
           "max_api": 33,
           "abis": [
@@ -230,8 +230,8 @@
           "sha256": null
         },
         {
-          "variant_label": "8.0.22 / arm64-v8a / Android 12",
-          "version": "8.0.22",
+          "variant_label": "Google Play Store 52.9.21 by Google LLC / arm64-v8a / Android 12",
+          "version": "Google Play Store 52.9.21 by Google LLC",
           "min_api": 31,
           "max_api": 32,
           "abis": [
@@ -247,8 +247,8 @@
           "sha256": null
         },
         {
-          "variant_label": "8.0.22 / arm64-v8a / Android 11",
-          "version": "8.0.22",
+          "variant_label": "Google Play Store 52.9.21 by Google LLC / arm64-v8a / Android 11",
+          "version": "Google Play Store 52.9.21 by Google LLC",
           "min_api": 30,
           "max_api": 30,
           "abis": [
@@ -264,8 +264,8 @@
           "sha256": null
         },
         {
-          "variant_label": "8.0.22 / armv7 / Android 11+",
-          "version": "8.0.22",
+          "variant_label": "Google Play Store 52.9.21 by Google LLC / armv7 / Android 11+",
+          "version": "Google Play Store 52.9.21 by Google LLC",
           "min_api": 30,
           "max_api": null,
           "abis": [
